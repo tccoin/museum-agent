@@ -41,6 +41,8 @@ function App() {
   const [selectedAgentConfigSet, setSelectedAgentConfigSet] = useState<
     AgentConfig[] | null
   >(null);
+  const [selectedVoice, setSelectedVoice] = useState<string>("echo");
+  const [voiceSpeed, setVoiceSpeed] = useState<number>(1.0);
 
   const [dataChannel, setDataChannel] = useState<RTCDataChannel | null>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);
@@ -123,6 +125,14 @@ function App() {
       );
       addTranscriptBreadcrumb(`Agent: ${selectedAgentName}`, currentAgent);
       updateSession(true);
+
+      // Add a slight delay before sending the greeting message
+      setTimeout(() => {
+        sendClientEvent(
+          { type: "response.create" },
+          "(trigger initial greeting)"
+        );
+      }, 1000);
     }
   }, [selectedAgentConfigSet, selectedAgentName, sessionStatus]);
 
@@ -247,12 +257,12 @@ function App() {
     const turnDetection = isPTTActive
       ? null
       : {
-          type: "server_vad",
-          threshold: 0.5,
-          prefix_padding_ms: 300,
-          silence_duration_ms: 200,
-          create_response: true,
-        };
+        type: "server_vad",
+        threshold: 0.5,
+        prefix_padding_ms: 300,
+        silence_duration_ms: 200,
+        create_response: true,
+      };
 
     const instructions = currentAgent?.instructions || "";
     const tools = currentAgent?.tools || [];
@@ -262,7 +272,7 @@ function App() {
       session: {
         modalities: ["text", "audio"],
         instructions,
-        voice: "sage",
+        voice: selectedVoice,
         input_audio_transcription: { model: "whisper-1" },
         turn_detection: turnDetection,
         tools,
@@ -270,10 +280,6 @@ function App() {
     };
 
     sendClientEvent(sessionUpdateEvent);
-
-    if (shouldTriggerResponse) {
-      sendSimulatedUserMessage("hi");
-    }
   };
 
   const cancelAssistantSpeech = async () => {
@@ -375,6 +381,21 @@ function App() {
     window.location.replace(url.toString());
   };
 
+  const handleVoiceChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedVoice(e.target.value);
+    if (sessionStatus === "CONNECTED") {
+      updateSession();
+    }
+  };
+
+  const handleVoiceSpeedChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newSpeed = parseFloat(e.target.value);
+    setVoiceSpeed(newSpeed);
+    if (sessionStatus === "CONNECTED") {
+      updateSession();
+    }
+  };
+
   useEffect(() => {
     const storedPushToTalkUI = localStorage.getItem("pushToTalkUI");
     if (storedPushToTalkUI) {
@@ -443,46 +464,91 @@ function App() {
         >
           <div>
             <Image
-              src="/openai-logomark.svg"
-              alt="OpenAI Logo"
-              width={20}
-              height={20}
+              src="/images/umich_engin.svg"
+              alt="University of Michigan Engineering Logo"
+              width={30}
+              height={30}
               className="mr-2"
             />
           </div>
           <div>
-            Realtime API <span className="text-gray-500">Agents</span>
+            Museum <span className="text-gray-500">Agent</span>
           </div>
         </div>
-        <div className="flex items-center">
-          <label className="flex items-center text-base gap-1 mr-2 font-medium">
-            Scenario
-          </label>
-          <div className="relative inline-block">
-            <select
-              value={agentSetKey}
-              onChange={handleAgentChange}
-              className="appearance-none border border-gray-300 rounded-lg text-base px-2 py-1 pr-8 cursor-pointer font-normal focus:outline-none"
-            >
-              {Object.keys(allAgentSets).map((agentKey) => (
-                <option key={agentKey} value={agentKey}>
-                  {agentKey}
-                </option>
-              ))}
-            </select>
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2 text-gray-600">
-              <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                <path
-                  fillRule="evenodd"
-                  d="M5.23 7.21a.75.75 0 011.06.02L10 10.44l3.71-3.21a.75.75 0 111.04 1.08l-4.25 3.65a.75.75 0 01-1.04 0L5.21 8.27a.75.75 0 01.02-1.06z"
-                  clipRule="evenodd"
-                />
-              </svg>
+        <div className="flex items-center gap-6">
+          <div className="flex items-center">
+            <label className="flex items-center text-base gap-1 mr-2 font-medium">
+              Voice
+            </label>
+            <div className="relative inline-block">
+              <select
+                value={selectedVoice}
+                onChange={handleVoiceChange}
+                className="appearance-none border border-gray-300 rounded-lg text-base px-2 py-1 pr-8 cursor-pointer font-normal focus:outline-none"
+              >
+                <option value="echo">Echo</option>
+                <option value="fable">Fable</option>
+                <option value="onyx">Onyx</option>
+                <option value="nova">Nova</option>
+                <option value="shimmer">Shimmer</option>
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2 text-gray-600">
+                <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                  <path
+                    fillRule="evenodd"
+                    d="M5.23 7.21a.75.75 0 011.06.02L10 10.44l3.71-3.21a.75.75 0 111.04 1.08l-4.25 3.65a.75.75 0 01-1.04 0L5.21 8.27a.75.75 0 01.02-1.06z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center">
+            <label className="flex items-center text-base gap-1 mr-2 font-medium">
+              Speed: {voiceSpeed.toFixed(1)}x
+            </label>
+            <input
+              type="range"
+              min="0.5"
+              max="2.0"
+              step="0.1"
+              value={voiceSpeed}
+              onChange={handleVoiceSpeedChange}
+              className="w-24"
+            />
+          </div>
+
+          <div className="flex items-center">
+            <label className="flex items-center text-base gap-1 mr-2 font-medium">
+              Scenario
+            </label>
+            <div className="relative inline-block">
+              <select
+                value={agentSetKey}
+                onChange={handleAgentChange}
+                className="appearance-none border border-gray-300 rounded-lg text-base px-2 py-1 pr-8 cursor-pointer font-normal focus:outline-none"
+              >
+                {Object.keys(allAgentSets).map((agentKey) => (
+                  <option key={agentKey} value={agentKey}>
+                    {agentKey}
+                  </option>
+                ))}
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2 text-gray-600">
+                <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                  <path
+                    fillRule="evenodd"
+                    d="M5.23 7.21a.75.75 0 011.06.02L10 10.44l3.71-3.21a.75.75 0 111.04 1.08l-4.25 3.65a.75.75 0 01-1.04 0L5.21 8.27a.75.75 0 01.02-1.06z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </div>
             </div>
           </div>
 
           {agentSetKey && (
-            <div className="flex items-center ml-6">
+            <div className="flex items-center">
               <label className="flex items-center text-base gap-1 mr-2 font-medium">
                 Agent
               </label>

@@ -117,12 +117,10 @@ function Transcript({
 
             if (type === "MESSAGE") {
               const isUser = role === "user";
-              const containerClasses = `flex justify-end flex-col ${
-                isUser ? "items-end" : "items-start"
-              }`;
-              const bubbleBase = `max-w-lg p-3 ${
-                isUser ? "bg-gray-900 text-gray-100" : "bg-gray-100 text-black"
-              }`;
+              const containerClasses = `flex justify-end flex-col ${isUser ? "items-end" : "items-start"
+                }`;
+              const bubbleBase = `max-w-lg p-3 ${isUser ? "bg-gray-900 text-gray-100" : "bg-gray-100 text-black"
+                }`;
               const isBracketedMessage =
                 title.startsWith("[") && title.endsWith("]");
               const messageStyle = isBracketedMessage
@@ -136,14 +134,12 @@ function Transcript({
                 <div key={itemId} className={containerClasses}>
                   <div className="max-w-lg">
                     <div
-                      className={`${bubbleBase} rounded-t-xl ${
-                        guardrailResult ? "" : "rounded-b-xl"
-                      }`}
+                      className={`${bubbleBase} rounded-t-xl ${guardrailResult ? "" : "rounded-b-xl"
+                        }`}
                     >
                       <div
-                        className={`text-xs ${
-                          isUser ? "text-gray-400" : "text-gray-500"
-                        } font-mono`}
+                        className={`text-xs ${isUser ? "text-gray-400" : "text-gray-500"
+                          } font-mono`}
                       >
                         {timestamp}
                       </div>
@@ -160,6 +156,28 @@ function Transcript({
                 </div>
               );
             } else if (type === "BREADCRUMB") {
+              // Check if this is a show_image function call
+              if (title.includes("function call: show_image") && data && data.image_path) {
+                return (
+                  <div key={itemId} className="flex flex-col items-center w-full my-4">
+                    <div className="text-xs font-mono text-gray-500 mb-2">{timestamp}</div>
+                    <div className="relative w-full max-w-2xl h-auto">
+                      <Image
+                        src={data.image_path}
+                        alt={data.alt_text || "Displayed image"}
+                        width={800}
+                        height={600}
+                        className="rounded-lg shadow-md"
+                        style={{ objectFit: 'contain' }}
+                      />
+                    </div>
+                    {data.alt_text && (
+                      <div className="text-sm text-gray-600 mt-2">{data.alt_text}</div>
+                    )}
+                  </div>
+                );
+              }
+
               return (
                 <div
                   key={itemId}
@@ -167,16 +185,14 @@ function Transcript({
                 >
                   <span className="text-xs font-mono">{timestamp}</span>
                   <div
-                    className={`whitespace-pre-wrap flex items-center font-mono text-sm text-gray-800 ${
-                      data ? "cursor-pointer" : ""
-                    }`}
+                    className={`whitespace-pre-wrap flex items-center font-mono text-sm text-gray-800 ${data ? "cursor-pointer" : ""
+                      }`}
                     onClick={() => data && toggleTranscriptItemExpand(itemId)}
                   >
                     {data && (
                       <span
-                        className={`text-gray-400 mr-1 transform transition-transform duration-200 select-none font-mono ${
-                          expanded ? "rotate-90" : "rotate-0"
-                        }`}
+                        className={`text-gray-400 mr-1 transform transition-transform duration-200 select-none font-mono ${expanded ? "rotate-90" : "rotate-0"
+                          }`}
                       >
                         ▶
                       </span>
